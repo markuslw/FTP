@@ -31,6 +31,8 @@ int main() {
     FILE *file_to_send, *received_file;
     ssize_t bytes_read;
 
+    /*--------------------------------------CREATE SOCKETS-------------------------------------------------*/
+
     // Convert the public IP address from string to binary form
     server_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
     if (server_addr.sin_addr.s_addr == INADDR_NONE) {
@@ -43,6 +45,8 @@ int main() {
         perror("Socket failed");
         exit(EXIT_FAILURE);
     }
+
+    /*------------------------------------ESTABLISH CONNECTIONS----------------------------------------------*/
     
     // Connect to server
     server_addr.sin_family = AF_INET;
@@ -68,6 +72,8 @@ int main() {
 
     send(sockfd, &connection, sizeof(connection), 0);
 
+    /*----------------------------------------SEND FILE------------------------------------------------*/
+
     char filepath[256];
     printf("Enter filepath (/Downloads/my_report.docx): ");
     scanf("%255s", filepath);
@@ -81,21 +87,9 @@ int main() {
     }
 
     char filename[256];
-    char fileformat[8];
     for (int i = 0; i < filepath_length; i++) {
         if (filepath[i] == '/' || filepath[i] == '\\') {
             i = 0;
-        } else if (filepath[i] == '.') {
-            filename[i] = '\0';
-            for (int j = 0; j < 8; j++) {
-                if (filepath[i] == '\0') {
-                    fileformat[j] == '\0';
-                    break;
-                }
-                fileformat[j] = filepath[i];
-                i++;
-            }
-            break;
         } else if (filepath[i] == '\0') {
             filename[i] = '\0';
             break;
@@ -105,7 +99,6 @@ int main() {
 
     header_t fileheader;
     strcpy(fileheader.filename, filename);
-    strcpy(fileheader.fileformat, fileformat);
 
     send(sockfd, &fileheader, sizeof(fileheader), 0);
 
