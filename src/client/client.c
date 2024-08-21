@@ -18,18 +18,11 @@ typedef struct {
     char fileformat[8];
 } header_t;
 
-typedef struct {
-    int connection_type;
-    char dest_addr[INET_ADDRSTRLEN];
-    char src_addr[INET_ADDRSTRLEN];
-} connection_t;
-
 int main() {
-    int sockfd, bytes_received;
+    int sockfd, bytes_received, bytes_read;
     struct sockaddr_in server_addr;
     char buffer[BUFFER_SIZE] = {0};
-    FILE *file_to_send, *received_file;
-    ssize_t bytes_read;
+    FILE *f;
 
     /*--------------------------------------CREATE SOCKETS-------------------------------------------------*/
 
@@ -58,20 +51,6 @@ int main() {
     }
     printf("Connected to server\n");
 
-    connection_t connection;
-    int connection_type;
-    char dest_addr[32];
-
-    printf("Enter connection type\n\t1. Recieve\n\t2. Send\n\n");
-    scanf("%d", &connection_type);
-    strcpy(connection.connection_type, connection_type);
-
-    printf("Enter the public IPv4 destination address: ");
-    scanf("%31s", dest_addr);
-    strcpy(connection.dest_addr, dest_addr);
-
-    send(sockfd, &connection, sizeof(connection), 0);
-
     /*----------------------------------------SEND FILE------------------------------------------------*/
 
     char filepath[256];
@@ -80,30 +59,41 @@ int main() {
     int filepath_length = strlen(filepath);
 
     // Open file to send
-    file_to_send = fopen(filepath, "rb"); // Open file for reading in binary mode
-    if (file_to_send == NULL) {
+    f = fopen(filepath, "rb"); // Open file for reading in binary mode
+    if (f == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
+    } else {
+        printf("File opened successfully\n");
     }
 
     char filename[256];
+    int j = 0;
     for (int i = 0; i < filepath_length; i++) {
-        if (filepath[i] == '/' || filepath[i] == '\\') {
-            i = 0;
+        if ((filepath[i] == '.' && filepath[i+1] == '/') || (filepath[i] == '.' && filepath[i+1] == '\\')) {
+            i += 1;
+            continue;
+        } else if (filepath[i] == '/' || filepath[i] == '\\') {
+            j = 0;
+            continue;
         } else if (filepath[i] == '\0') {
-            filename[i] = '\0';
+            filename[j] = '\0';
             break;
         }
-        filename[i] = filepath[i];
+        filename[j] = filepath[i];
+        j++;
     }
+
+    printf("Sending file header for %s...\n", filename);
 
     header_t fileheader;
     strcpy(fileheader.filename, filename);
-
     send(sockfd, &fileheader, sizeof(fileheader), 0);
 
+    printf("Sending file %s...\n", filename);
+
     // Read from file and send over socket
-    while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, file_to_send)) > 0) {
+    while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, f)) > 0) {
         if (send(sockfd, buffer, bytes_read, 0) != bytes_read) {
             perror("send failed");
             exit(EXIT_FAILURE);
@@ -113,8 +103,10 @@ int main() {
         perror("read failed");
         exit(EXIT_FAILURE);
     }
+
     printf("File sent successfully\n");
-    fclose(file_to_send);
+    
+    fclose(f);
     close(sockfd);
     
     return 0;
