@@ -27,7 +27,7 @@ int main() {
     /*--------------------------------------CREATE SOCKETS-------------------------------------------------*/
 
     // Convert the public IP address from string to binary form
-    server_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
+    server_addr.sin_addr.s_addr = inet_addr("10.0.0.26");
     if (server_addr.sin_addr.s_addr == INADDR_NONE) {
         perror("Invalid address");
         exit(EXIT_FAILURE);
@@ -53,9 +53,9 @@ int main() {
 
     /*----------------------------------------SEND FILE------------------------------------------------*/
 
-    char filepath[256];
-    printf("Enter filepath (/Downloads/my_report.docx): ");
-    scanf("%255s", filepath);
+    char filepath[256] = "image.png";
+    //printf("Enter filepath (./Downloads/my_report.docx): ");
+    //scanf("%255s", filepath);
     int filepath_length = strlen(filepath);
 
     // Open file to send
