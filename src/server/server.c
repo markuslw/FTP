@@ -26,7 +26,6 @@ char *formatfinder(char filetype[2]);
 
 typedef struct {
     char filename[256];
-    char fileformat[8];
 } header_t;
 
 typedef struct {
@@ -39,11 +38,16 @@ void *receive_data (void *arg) {
     thread_arg_t* thread_arg = (thread_arg_t*)arg;
     header_t fileheader;
     int socket = thread_arg->socket;
-    int bytes_received = 0, bytes_read = 0;
+    int data_received = 0, bytes_read = 0;
+    unsigned long long header_received = 0;
     char buffer[BUFFER_SIZE] = {0};
 
+    printf("Receiving file header...\n");
+
     // Receive file header struct
-    recv(socket, &fileheader, sizeof(header_t), 0);
+    while ((header_received = recv(socket, &fileheader, sizeof(header_t), 0)) < sizeof(header_t)) {
+        continue;
+    }
 
     // Receive file and write
     f = fopen(fileheader.filename, "wb"); // Open a file for writing in binary mode
@@ -51,10 +55,10 @@ void *receive_data (void *arg) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
-    while ((bytes_received = recv(socket, buffer, BUFFER_SIZE, 0)) > 0) {
-        fwrite(buffer, 1, bytes_received, f);
+    while ((data_received = recv(socket, buffer, BUFFER_SIZE, 0)) > 0) {
+        fwrite(buffer, 1, data_received, f);
     }
-    if (bytes_received < 0) {
+    if (data_received < 0) {
         perror("Recv failed from socket");
         exit(EXIT_FAILURE);
     }
@@ -110,18 +114,18 @@ int main() {
 
     arg.socket = socket_fd;
 
+    printf("Creating thread...\n");
+
     // Create threads for each socket
     if (pthread_create(&thread, NULL, receive_data, &arg) != 0) {
         perror("Failed to create thread for socket_a");
         exit(EXIT_FAILURE);
     }
 
-    printf("after thread creation\n");
-
     // Wait for the threads to finish (optional, depending on your application's needs)
     pthread_join(thread, NULL);
 
-    printf("after thread join\n");
+    printf("Thread finished\n");
 
     close(sockfd);
 

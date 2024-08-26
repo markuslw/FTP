@@ -1,11 +1,17 @@
-#include <stdio.h> // For printf(), perror(), fgets(), popen(), pclose()
-#include <stdlib.h> // For exit()
+#include <stdio.h>      // For printf(), perror(), fgets(), popen(), pclose()
+#include <stdlib.h>     // For exit()
+#ifdef _WIN32
+#include <winsock2.h>   // For socket functions
+#include <ws2tcpip.h>   // For inet_pton()
+#pragma comment(lib, "ws2_32.lib") // Link with Ws2_32.lib
+#else
 #include <sys/socket.h> // For socket(), connect(), send()
 #include <netinet/in.h> // For sockaddr_in
-#include <arpa/inet.h> // For inet_pton()
-#include <unistd.h> // For close()
-#include <fcntl.h> // For file operations
-#include <string.h> // For memset and strcpy
+#include <arpa/inet.h>  // For inet_pton()
+#include <unistd.h>     // For close()
+#endif
+#include <fcntl.h>      // For file operations
+#include <string.h>     // For memset and strcpy
 
 #define PORT 8080
 #define BUFFER_SIZE 1024
@@ -15,7 +21,6 @@
 
 typedef struct {
     char filename[256];
-    char fileformat[8];
 } header_t;
 
 int main() {
@@ -24,10 +29,18 @@ int main() {
     char buffer[BUFFER_SIZE] = {0};
     FILE *f;
 
+#ifdef _WIN32
+    WSADATA wsaData;
+    if (WSAStartup(MAKEWORD(2, 2), &wsaData) != 0) {
+        printf("WSAStartup failed.\n");
+        return 1;
+    }
+#endif
+
     /*--------------------------------------CREATE SOCKETS-------------------------------------------------*/
 
     // Convert the public IP address from string to binary form
-    server_addr.sin_addr.s_addr = inet_addr("10.0.0.26");
+    server_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
     if (server_addr.sin_addr.s_addr == INADDR_NONE) {
         perror("Invalid address");
         exit(EXIT_FAILURE);
@@ -44,7 +57,7 @@ int main() {
     // Connect to server
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(PORT);
-    printf("Connecting to: %s\n", inet_ntoa(server_addr.sin_addr));
+    printf("Connecting to server...\n");
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("Connection error");
         exit(EXIT_FAILURE);
@@ -83,6 +96,7 @@ int main() {
         filename[j] = filepath[i];
         j++;
     }
+    filename[j] = '\0';
 
     printf("Sending file header for %s...\n", filename);
 
@@ -105,9 +119,11 @@ int main() {
     }
 
     printf("File sent successfully\n");
-    
     fclose(f);
     close(sockfd);
+
+    printf("Press Enter to exit...");
+    getchar(); // Waits for the user to press Enter
     
     return 0;
 }
