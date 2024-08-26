@@ -43,12 +43,14 @@ int main() {
     server_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
     if (server_addr.sin_addr.s_addr == INADDR_NONE) {
         perror("Invalid address");
+        getchar();
         exit(EXIT_FAILURE);
     }
 
     // Create socket
     if ((sockfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Socket failed");
+        getchar();
         exit(EXIT_FAILURE);
     }
 
@@ -60,6 +62,7 @@ int main() {
     printf("Connecting to server...\n");
     if (connect(sockfd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("Connection error");
+        getchar();
         exit(EXIT_FAILURE);
     }
     printf("Connected to server\n");
@@ -121,6 +124,10 @@ int main() {
     printf("File sent successfully\n");
     fclose(f);
     close(sockfd);
+
+#ifdef _WIN32
+    WSACleanup();  // Cleanup Winsock when done
+#endif
 
     printf("Press Enter to exit...");
     getchar(); // Waits for the user to press Enter

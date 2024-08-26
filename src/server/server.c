@@ -49,6 +49,8 @@ void *receive_data (void *arg) {
         continue;
     }
 
+    printf("Writing to %s...\n", fileheader.filename);
+
     // Receive file and write
     f = fopen(fileheader.filename, "wb"); // Open a file for writing in binary mode
     if (f == NULL) {
