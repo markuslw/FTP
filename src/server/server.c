@@ -60,10 +60,6 @@ void *receive_data (void *arg) {
     while ((data_received = recv(socket, buffer, BUFFER_SIZE, 0)) > 0) {
         fwrite(buffer, 1, data_received, f);
     }
-    if (data_received < 0) {
-        perror("Recv failed from socket");
-        exit(EXIT_FAILURE);
-    }
     printf("File received successfully from socket\n");
     close(socket);
     fclose(f);
