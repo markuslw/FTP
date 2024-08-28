@@ -60,7 +60,12 @@ void *receive_data (void *arg) {
     while ((data_received = recv(socket, buffer, BUFFER_SIZE, 0)) > 0) {
         fwrite(buffer, 1, data_received, f);
     }
+
     printf("File received successfully from socket\n");
+
+    const char *ack = "ACK";
+    send(socket, ack, sizeof(ack), 0);
+
     close(socket);
     fclose(f);
 }
