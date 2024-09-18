@@ -45,6 +45,7 @@ void *receive_data (void *arg) {
     FILE *f;
     thread_arg_t* thread_arg = (thread_arg_t*)arg;
     header_t fileheader;
+    
     int socket_self = thread_arg->socket_self;
     int socket_other = thread_arg->socket_other;
     int bytes_received = 0, bytes_read = 0;
