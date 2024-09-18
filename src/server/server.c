@@ -26,6 +26,7 @@ char *formatfinder(char filetype[2]);
 
 typedef struct {
     char filename[256];
+    long filesize;
 } header_t;
 
 typedef struct {
@@ -39,32 +40,35 @@ void *receive_data (void *arg) {
     header_t fileheader;
     int socket = thread_arg->socket;
     int data_received = 0, bytes_read = 0;
-    unsigned long long header_received = 0;
+    int header_received = 0;
     char buffer[BUFFER_SIZE] = {0};
 
     printf("Receiving file header...\n");
 
-    // Receive file header struct
     while ((header_received = recv(socket, &fileheader, sizeof(header_t), 0)) < sizeof(header_t)) {
         continue;
     }
 
     printf("Writing to %s...\n", fileheader.filename);
 
-    // Receive file and write
-    f = fopen(fileheader.filename, "wb"); // Open a file for writing in binary mode
+    /*
+        Open file with given name and 
+        write in chunks
+    */
+    f = fopen(fileheader.filename, "wb");
     if (f == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
     }
     while ((data_received = recv(socket, buffer, BUFFER_SIZE, 0)) > 0) {
+        bytes_read += data_received;
+        
+        printf("\r%i/%ld bytes received", bytes_read, fileheader.filesize);
+
         fwrite(buffer, 1, data_received, f);
     }
 
-    printf("File received successfully from socket\n");
-
-    const char *ack = "ACK";
-    send(socket, ack, sizeof(ack), 0);
+    printf("\nFile received successfully from socket\n");
 
     close(socket);
     fclose(f);
@@ -131,6 +135,9 @@ int main() {
     printf("Thread finished\n");
 
     close(sockfd);
+
+    printf("Press Enter to exit...");
+    getchar(); // Waits for the user to press Enter
 
     return 0;
 }

@@ -21,10 +21,11 @@
 
 typedef struct {
     char filename[256];
+    long filesize;
 } header_t;
 
 int main() {
-    int sockfd, bytes_received, bytes_read;
+    int sockfd, bytes_received, bytes_read, bytes_sent = 0;
     struct sockaddr_in server_addr;
     char buffer[BUFFER_SIZE] = {0};
     FILE *f;
@@ -39,8 +40,8 @@ int main() {
 
     /*--------------------------------------CREATE SOCKETS-------------------------------------------------*/
 
-    // Convert the public IP address from string to binary form
-    server_addr.sin_addr.s_addr = inet_addr("");
+    // Set address
+    server_addr.sin_addr.s_addr = inet_addr("0.0.0.0");
     if (server_addr.sin_addr.s_addr == INADDR_NONE) {
         perror("Invalid address");
         getchar();
@@ -75,7 +76,7 @@ int main() {
     int filepath_length = strlen(filepath);
 
     // Open file to send
-    f = fopen(filepath, "rb"); // Open file for reading in binary mode
+    f = fopen(filepath, "rb");
     if (f == NULL) {
         perror("Error opening file");
         exit(EXIT_FAILURE);
@@ -83,6 +84,12 @@ int main() {
         printf("File opened successfully\n");
     }
 
+    // Determine the size of the file
+    fseek(f, 0, SEEK_END);
+    long filesize = ftell(f);
+    fseek(f, 0, SEEK_SET);
+
+    // Freaky algorithm to get filename from filepath
     char filename[256];
     int j = 0;
     for (int i = 0; i < filepath_length; i++) {
@@ -103,26 +110,29 @@ int main() {
 
     printf("Sending file header for %s...\n", filename);
 
+    /*
+        Send miscellaneous data about the file to the server
+    */
     header_t fileheader;
     strcpy(fileheader.filename, filename);
+    fileheader.filesize = filesize;
     send(sockfd, &fileheader, sizeof(fileheader), 0);
 
     printf("Sending file %s...\n", filename);
 
-    // Read from file and send over socket
+    /*
+        Read and send file in chunks
+    */
     while ((bytes_read = fread(buffer, 1, BUFFER_SIZE, f)) > 0) {
         if (send(sockfd, buffer, bytes_read, 0) != bytes_read) {
             perror("send failed");
             exit(EXIT_FAILURE);
         }
+        bytes_sent += bytes_read;
+        printf("\r%i bytes sent", bytes_sent);
     }
 
-    printf("File sent successfully\n");
-
-    char *ack;
-    while ((recv(socketfd, &ack, sizeof(ack), 0)) < sizeof(ack)) {
-        continue;
-    }
+    printf("\nFile sent successfully\n");
 
     fclose(f);
     close(sockfd);
